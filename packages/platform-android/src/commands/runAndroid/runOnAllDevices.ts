@@ -31,7 +31,6 @@ type AndroidProject = NonNullable<Config['project']['android']>;
 async function runOnAllDevices(
   args: Flags,
   cmd: string,
-  packageName: string,
   adbPath: string,
   androidProject: AndroidProject,
 ) {
@@ -54,10 +53,7 @@ async function runOnAllDevices(
 
   try {
     const tasks = args.tasks || ['install' + toPascalCase(args.variant)];
-    const gradleArgs = getTaskNames(
-      args.appFolder || androidProject.appName,
-      tasks,
-    );
+    const gradleArgs = getTaskNames(androidProject.appName, tasks);
 
     if (args.port != null) {
       gradleArgs.push('-PreactNativeDevServerPort=' + args.port);
@@ -71,8 +67,13 @@ async function runOnAllDevices(
         .filter((arch) => arch != null);
       if (architectures.length > 0) {
         logger.info(`Detected architectures ${architectures.join(', ')}`);
+        // `reactNativeDebugArchitectures` was renamed to `reactNativeArchitectures` in 0.68.
+        // Can be removed when 0.67 no longer needs to be supported.
         gradleArgs.push(
           '-PreactNativeDebugArchitectures=' + architectures.join(','),
+        );
+        gradleArgs.push(
+          '-PreactNativeArchitectures=' + architectures.join(','),
         );
       }
     }
@@ -93,7 +94,7 @@ async function runOnAllDevices(
   (devices.length > 0 ? devices : [undefined]).forEach(
     (device: string | void) => {
       tryRunAdbReverse(args.port, device);
-      tryLaunchAppOnDevice(device, packageName, adbPath, args);
+      tryLaunchAppOnDevice(device, androidProject.packageName, adbPath, args);
     },
   );
 }
